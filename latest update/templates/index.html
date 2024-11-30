@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+    <!-- Header -->
+    <header class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <button onclick="window.location.href='/'" class="btn btn-custom navbar-brand">
+                Disaster Prediction
+            </button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 font-weight-bold">Predict Natural Disasters & Weather Events</h1>
+            <p class="lead">Stay prepared and safe with real-time predictions based on location data and weather analytics.</p>
+            <form action="/predict" method="POST" class="search-form">
+                <input type="text" name="location" placeholder="Enter location to predict disaster risk" required>
+                <button type="submit">Predict</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <div class="container my-5" id="results">
+        {% if result %}
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h3 class="card-title">Prediction for {{ location }}</h3>
+                            <p class="card-text">Disaster Risk: <strong>{{ result }}</strong></p>
+                            {% if weather %}
+                                <p><strong>Temperature:</strong> {{ weather.main.temp }} °C</p>
+                                <p><strong>Humidity:</strong> {{ weather.main.humidity }} %</p>
+                                <p><strong>Wind Speed:</strong> {{ weather.wind.speed }} m/s</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        {% if error %}
+            <div class="alert alert-danger">
+                <h4>Error: {{ error }}</h4>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Map Section -->
+    {% if lat and lon %}
+        <div class="container text-center">
+            <h2>Map for {{ location }}</h2>
+            <div class="search-container">
+                <form id="map-search-form">
+                    <input type="text" id="map-location" placeholder="Search for a place" />
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+            <div id="map"></div>
+        </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-3">
+        <p>Data provided by <a href="https://openweathermap.org" target="_blank" class="text-info">OpenWeather</a> and other sources.</p>
+        <p>&copy; 2024 Disaster Prediction App - Built with Flask & AI</p>
+    </footer>
+
+    <!-- JavaScript for Leaflet Map -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([{{ lat }}, {{ lon }}], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        
+        L.marker([{{ lat }}, {{ lon }}]).addTo(map)
+            .bindPopup('{{ location }}')
+            .openPopup();
+
+        document.getElementById('map-search-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var location = document.getElementById('map-location').value;
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${location}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        var lat = data[0].lat;
+                        var lon = data[0].lon;
+                        map.setView([lat, lon], 13);
+                        L.marker([lat, lon]).addTo(map)
+                            .bindPopup(location)
+                            .openPopup();
+                    } else {
+                        alert("Location not found!");
+                    }
+                })
+                .catch(err => alert("Error fetching location data"));
+        });
+    </script>
+</body>
+</html>
